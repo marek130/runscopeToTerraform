@@ -145,7 +145,7 @@ def editName(fileName):
 	for char in fileName:
 		if char in " /?":
 			result += "_"
-		elif char in "={}().,+":
+		elif not char.isalnum():
 			continue
 		else:
 			result += char
