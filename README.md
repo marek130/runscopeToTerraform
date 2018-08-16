@@ -9,4 +9,4 @@ After running script you will need to enter an **access_token** for runscope API
 
 This script will create files in a directory where the script is located.
 
-Parameters webhooks, stop_on_failure, emails and headers are not supported in environments.
+Parameters webhooks, stop_on_failure and emails are not supported in environments.
