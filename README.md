@@ -1,2 +1,2 @@
 # runscopeToTerraform
-python script to convert runscope setting to terraform files.
+python script to convert runscope settings to terraform files.
