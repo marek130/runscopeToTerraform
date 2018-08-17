@@ -24,7 +24,7 @@ resource "runscope_bucket" "MyBucket" {
 }
 
 #create resource of type shared environment
-resource "runscope_environment" "MyBucket_environment" {
+resource "runscope_environment" "shared_environment_MyBucket" {
 	bucket_id         = "${runscope_bucket.MyBucket.id}"
 	name              = "environment"
 	regions           = ["eu1"]
@@ -96,5 +96,22 @@ resource "runscope_schedule" "schedule0_Test" {
 		interval       = "6h"
 		environment_id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 		note           = ""
+}
+
+#create environment for this test
+resource "runscope_environment" "MyBucket_Test_Test_Settings" {
+	bucket_id         = "${var.bucket_id}"
+	test_id           = "${runscope_test.Test.id}"
+	name              = "Test Settings"
+	regions           = ["us1"]
+	retry_on_failure  = false
+	initial_variables = 
+	  {
+	  },
+	script            = ""
+	verify_ssl        = true
+	preserve_cookies  = false
+	integrations      = []
+	remote_agents     = []
 }
 ```
