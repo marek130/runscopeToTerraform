@@ -54,7 +54,7 @@ Folder _MyBucket_TESTS_ will look like this:
 ➜  MyBucket_TESTS tree
 .
 |-- Test.tf
-`-- attributes.tf
+`-- variables.tf
 ```
 
 File _Test.tf_ looks like this:
