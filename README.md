@@ -12,7 +12,7 @@ This script will create folders with test files in a directory where the script 
 Parameters _webhooks_, _stop_on_failure_ and _emails_ are not supported in environments.
 
 # EXAMPLE: #
-If bucket called _MyBucket_ has one test called _Test_ with one test step, the output will look like this:
+If bucket called ```MyBucket``` has one test called ```Test``` with one test step, the output will look like this:
 
 File _MyBucket.tf_
 
