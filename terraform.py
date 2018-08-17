@@ -179,12 +179,12 @@ def editName(fileName):
 def initprogressBar(length):
 	sys.stdout.write("\n")
 	# setup toolbar
-	sys.stdout.write("Creating %d terraform files\n..." % (length))
+	sys.stdout.write("Will creat %d folders with test files\n..." % (length))
 	sys.stdout.flush()
-	sys.stdout.write("\b" * (length))
+	sys.stdout.write("\b\b\b")
 
-def progressBarStep(length, bucketName, index):
-	text = "#%s \033[95mCreated '%s.tf' file.\033[0m %s%%           " % ("_" * (length - (index+1)), bucketName, str(100*(index+1)/length))
+def progressBarStep(length, testName, index):
+	text = "#%s \033[95mCreated '%s.tf' file.\033[0m %s%%" % ("_" * (length - (index+1)), editName(testName), str(100*(index+1)/length)) + " " * 100
 	sys.stdout.write(text)
 	sys.stdout.flush()
 	sys.stdout.write("\b" * (len(text) - 10))
@@ -207,31 +207,33 @@ provider "runscope" {
 def parse(access_token, numberOfTests):
 	buckets = getAllBuckets(access_token)
 	initprogressBar(len(buckets))
-	i = 0
+	i = 1
 	for bucket in buckets:
 		folderName = createFolder(bucket["name"])
 		createAttributes(folderName)
 		resultBucket = ""
 		resultBucket += createBucket(bucket)
 		testsInBucket = getTestsFromBucket(bucket["key"], access_token, numberOfTests)
-		for test in testsInBucket:
+		print("\n%d) Create folder %s and %d tests files:" % (i, editName(bucket["name"]), len(testsInBucket)))
+		for index, test in enumerate(testsInBucket):
 			result = ""
 			result += createTest(test, bucket["name"])
 			testDetail = getTestDetail(bucket["key"], test["id"], access_token)
 			result += createTestStep(testDetail, bucket, access_token)
 			result += createSchedule(testDetail, bucket)
 			createFileTest(result, folderName, test["name"])
+			progressBarStep(len(testsInBucket), test["name"], index)
+		print("")
 		enviroments = getSharedEnviroments(bucket["key"], access_token)
 		resultBucket += createEnvironment(enviroments, bucket["name"])
 		resultBucket += createModule(bucket, folderName)
 		createNewFile(resultBucket, bucket["name"])
-		progressBarStep(len(buckets), bucket["name"], i)
 		i += 1
 	print("\n\033[92mCompleted!\033[0m")
 
 def main():
 	access_token  = input("Enter an access_token for runscope: ")
-	numberOfTests = input("How many tests you would like to get: ")
+	numberOfTests = input("How many tests you would like to get from every bucket: ")
 	makeInitFile(access_token)
 	parse(access_token, numberOfTests)
 
