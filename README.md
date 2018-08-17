@@ -10,3 +10,91 @@ After running the script you will need to enter an **access_token** for runscope
 This script will create folders with test files in a directory where the script is located.
 
 Parameters _webhooks_, _stop_on_failure_ and _emails_ are not supported in environments.
+
+# EXAMPLE: #
+If bucket called _MyBucket_ has one test called _Test_ with one test step, the output will look like this:
+
+File _MyBucket.tf_
+
+```terraform
+#create resource of type bucket
+resource "runscope_bucket" "MyBucket" {
+	name      = "MyBucket"
+	team_uuid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+}
+
+#create resource of type shared environment
+resource "runscope_environment" "MyBucket_environment" {
+	bucket_id         = "${runscope_bucket.MyBucket.id}"
+	name              = "environment"
+	regions           = ["eu1"]
+	retry_on_failure  = false
+	initial_variables = 
+	  {
+	    environment = "alpha",
+	    apiVersion = "1.0",
+	  },
+	script            = "[]"
+	verify_ssl        = true
+	preserve_cookies  = false
+	integrations      = []
+	remote_agents     = []
+}
+
+module "tests_MyBucket" {
+	source    = "./MyBucket_TESTS"
+
+	bucket_id = "${runscope_bucket.MyBucket.id}"
+}
+```
+
+Folder _MyBucket_TESTS_ will look like this:
+
+```
+➜  MyBucket tree
+.
+|-- Test.tf
+`-- attributes.tf
+```
+
+File _Test.tf_ looks like this:
+
+```terafform
+resource "runscope_test" "Test" {
+	name        = "Test"
+	description = ""
+	bucket_id   = "${var.bucket_id}"
+}
+
+resource "runscope_step" "step0_Test" {
+	bucket_id      = "${var.bucket_id}"
+	test_id        = "${runscope_test.Test.id}"
+	step_type      = "request"
+	url            = "https://{{environment}}example.com/{{apiVersion}}"
+	method         = "GET"
+	headers		   = {
+		header   = "x-api-key"
+		value    = "adasdadlakdadlkajdakdjalksjdsadlakdsjk"
+	}
+	assertions     = [
+	  {
+	    comparison = "equal_number",
+	    value = "200",
+	    source = "response_status",
+	  },
+	]
+	variables      = [
+	]
+	scripts        = ["var data = JSON.parse(response.body);\n"]
+	before_scripts = []
+	body           = ""
+}
+
+resource "runscope_schedule" "schedule0_Test" {
+		bucket_id      = "${var.bucket_id}"
+		test_id        = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+		interval       = "6h"
+		environment_id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+		note           = ""
+}
+```
