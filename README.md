@@ -51,7 +51,7 @@ module "tests_MyBucket" {
 Folder _MyBucket_TESTS_ will look like this:
 
 ```
-➜  MyBucket tree
+➜  MyBucket_TESTS tree
 .
 |-- Test.tf
 `-- attributes.tf
