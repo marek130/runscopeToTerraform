@@ -23,7 +23,7 @@ def getTestDetail(bucketKey, testID, header):
 		print("\n\033[91mSomething went wrong in request on test's detail.\nResponse code: ", r.status_code, "\033[0m")
 	return r.json()["data"]
 
-def getSharedEnviroments(bucketKey, header):
+def getSharedEnvironments(bucketKey, header):
 	link = "https://api.runscope.com/buckets/" + bucketKey + "/environments"
 	r = requests.get(link, headers={"Authorization":"Bearer %s" % (header)})
 	if r.status_code != 200:
@@ -136,7 +136,7 @@ def createVariables(folderName):
 
 def getHeaders(headers, testID, bucketKey, access_token):
 	result = {}
-	headersFromEnviroment = getSharedEnviroments(bucketKey, access_token)
+	headersFromEnviroment = getSharedEnvironments(bucketKey, access_token)
 	for index in range(len(headersFromEnviroment)):
 		if headersFromEnviroment[index]["headers"] != None:
 			for key in headersFromEnviroment[index]["headers"]:
@@ -224,7 +224,7 @@ def parse(access_token, numberOfTests):
 			createFileTest(result, folderName, test["name"])
 			progressBarStep(len(testsInBucket), test["name"], index)
 		print("")
-		enviroments = getSharedEnviroments(bucket["key"], access_token)
+		enviroments = getSharedEnvironments(bucket["key"], access_token)
 		resultBucket += createEnvironment(enviroments, bucket["name"])
 		resultBucket += createModule(bucket, folderName)
 		createNewFile(resultBucket, bucket["name"])
