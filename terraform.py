@@ -53,21 +53,40 @@ def getIntegrations(jsonData):
 	return result
 
 def createEnvironment(jsonData, bucketName):
+	result = ""
+	for index, environment in enumerate(jsonData["environments"]):
+		result += """resource "runscope_environment" "{}_{}_{}" {{
+	bucket_id         = \"${{var.bucket_id}}\"
+	test_id           = \"${{runscope_test.{}.id}}\"
+	name              = \"{}\"
+	regions           = {}
+	retry_on_failure  = {}
+	initial_variables = {}
+	script            = {}
+	verify_ssl        = {}
+	preserve_cookies  = {}
+	integrations      = {}
+	remote_agents     = {}
+}}\n\n""".format(editName(bucketName), editName(jsonData["name"]), editName(jsonData["environments"][index]["name"]), editName(jsonData["name"]), jsonData["environments"][index]["name"], json.dumps(jsonData["environments"][index]["regions"]), str(jsonData["environments"][index]["retry_on_failure"]).lower(), editAssertions(jsonData["environments"][index]["initial_variables"]) if jsonData["environments"][index]["initial_variables"] != None else "{}", json.dumps(jsonData["environments"][index]["script"]) if jsonData["environments"][index]["script"] != None else "\"\"", str(jsonData["environments"][index]["verify_ssl"]).lower(), str(jsonData["environments"][index]["preserve_cookies"]).lower(), json.dumps(getIntegrations(jsonData["environments"][index]["integrations"])), jsonData["environments"][index]["remote_agents"])
+	return result
+
+
+def createSharedEnvironment(jsonData, bucketName):
 	# parameters webhooks, stop_on_failure, emails and headers are not supported
 	result = ""
 	for index,_ in enumerate(jsonData):
-		result += """resource \"runscope_environment\" \"{}_{}\" {{
+		result += """resource \"runscope_environment\" \"shared_environment_{}_{}\" {{
 	bucket_id         = \"${{runscope_bucket.{}.id}}\"
 	name              = \"{}\"
 	regions           = {}
 	retry_on_failure  = {}
 	initial_variables = {}
-	script            = \"{}\"
+	script            = {}
 	verify_ssl        = {}
 	preserve_cookies  = {}
 	integrations      = {}
 	remote_agents     = {}
-}}\n\n""".format(editName(bucketName), editName(jsonData[index]["name"]), editName(bucketName), jsonData[index]["name"], json.dumps(jsonData[index]["regions"]), str(jsonData[index]["retry_on_failure"]).lower(), editAssertions(jsonData[index]["initial_variables"]) if jsonData[index]["initial_variables"] != None else "{}", jsonData[index]["script"] if jsonData[index]["script"] != None else [], str(jsonData[index]["verify_ssl"]).lower(), str(jsonData[index]["preserve_cookies"]).lower(), json.dumps(getIntegrations(jsonData[index]["integrations"])), jsonData[index]["remote_agents"])
+}}\n\n""".format(editName(bucketName), editName(jsonData[index]["name"]), editName(bucketName), jsonData[index]["name"], json.dumps(jsonData[index]["regions"]), str(jsonData[index]["retry_on_failure"]).lower(), editAssertions(jsonData[index]["initial_variables"]) if jsonData[index]["initial_variables"] != None else "{}", json.dumps(jsonData[index]["script"]) if jsonData[index]["script"] != None else "\"\"", str(jsonData[index]["verify_ssl"]).lower(), str(jsonData[index]["preserve_cookies"]).lower(), json.dumps(getIntegrations(jsonData[index]["integrations"])), jsonData[index]["remote_agents"])
 	return result
 
 def createSchedule(jsonData, bucket):
@@ -221,11 +240,12 @@ def parse(access_token, numberOfTests):
 			testDetail = getTestDetail(bucket["key"], test["id"], access_token)
 			result += createTestStep(testDetail, bucket, access_token)
 			result += createSchedule(testDetail, bucket)
+			result += createEnvironment(testDetail, bucket["name"])
 			createFileTest(result, folderName, test["name"])
 			progressBarStep(len(testsInBucket), test["name"], index)
-		print("")
+		print()
 		enviroments = getSharedEnvironments(bucket["key"], access_token)
-		resultBucket += createEnvironment(enviroments, bucket["name"])
+		resultBucket += createSharedEnvironment(enviroments, bucket["name"])
 		resultBucket += createModule(bucket, folderName)
 		createNewFile(resultBucket, bucket["name"])
 		i += 1
