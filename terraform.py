@@ -1,6 +1,7 @@
 import requests
 import json
 import sys
+import os
 
 def getAllBuckets(header):
 	r = requests.get("https://api.runscope.com/buckets", headers={"Authorization":"Bearer %s" % (header)})
@@ -8,8 +9,8 @@ def getAllBuckets(header):
 		print("\n\033[91mSomething went wrong in request on buckets.\nResponse code: ", r.status_code, "\033[0m")
 	return r.json()["data"] # list of bucket in JSON format
 
-def getTestsFromBucket(bucketKey, header):
-	link = "https://api.runscope.com/buckets/" + bucketKey + "/tests"
+def getTestsFromBucket(bucketKey, header, count):
+	link = "https://api.runscope.com/buckets/" + bucketKey + "/tests?count=" + count
 	r = requests.get(link, headers={"Authorization":"Bearer %s" % (header)})
 	if r.status_code != 200:
 		print("\n\033[91mSomething went wrong in request on tests from bucket.\nResponse code: ", r.status_code, "\033[0m")
@@ -30,9 +31,20 @@ def getSharedEnviroments(bucketKey, header):
 	return r.json()["data"] # list of shared environments
 
 def createNewFile(textToFile, fileName):
-	f = open(fileName + ".tf", "w")
+	f = open(editName(fileName) + ".tf", "w")
 	f.write(textToFile)
 	f.close()
+
+def createFileTest(textToFile, folderName, fileName):
+	f = open(folderName + "/" + editName(fileName) + ".tf", "w")
+	f.write(textToFile)
+	f.close()
+
+def createFolder(folderName):
+	newName = editName(folderName) + "_TESTS"
+	if not os.path.exists(newName):
+		os.makedirs(newName)
+	return newName
 
 def getIntegrations(jsonData):
 	result = []
@@ -63,12 +75,12 @@ def createSchedule(jsonData, bucket):
 
 	for index, _ in enumerate(jsonData["schedules"]):
 		result += """resource \"runscope_schedule\" \"schedule{}_{}\" {{
-		bucket_id      = \"${{runscope_bucket.{}.id}}\"
+		bucket_id      = \"${{var.bucket_id}}\"
 		test_id        = \"{}\"
 		interval       = \"{}\"
 		environment_id = \"{}\"
 		note           = \"{}\"
-}}\n\n""".format(index, editName(jsonData["name"]), editName(bucket["name"]), jsonData["id"], jsonData["schedules"][index]["interval"], jsonData["schedules"][index]["environment_id"], jsonData["schedules"][index]["note"] if jsonData["schedules"][index]["note"] != None else "")
+}}\n\n""".format(index, editName(jsonData["name"]), jsonData["id"], jsonData["schedules"][index]["interval"], jsonData["schedules"][index]["environment_id"], jsonData["schedules"][index]["note"] if jsonData["schedules"][index]["note"] != None else "")
 
 	return result
 
@@ -78,7 +90,7 @@ def createTestStep(jsonData, bucket, access_token):
 
 	for index, _ in enumerate(jsonData["steps"]):
 		result += """resource \"runscope_step\" \"step{}_{}\" {{
-	bucket_id      = \"${{runscope_bucket.{}.id}}\"
+	bucket_id      = \"${{var.bucket_id}}\"
 	test_id        = \"${{runscope_test.{}.id}}\"
 	step_type      = \"{}\"
 	url            = \"{}\"
@@ -91,7 +103,7 @@ def createTestStep(jsonData, bucket, access_token):
 	scripts        = {}
 	before_scripts = {}
 	body           = {}
-}}\n\n""".format(index, editName(jsonData["name"]), editName(bucket["name"]), editName(jsonData["name"]), jsonData["steps"][index]["step_type"], jsonData["steps"][index]["url"], jsonData["steps"][index]["method"], getHeaders(jsonData["steps"][index]["headers"], jsonData["id"], bucket["key"], access_token), editAssertions(jsonData["steps"][index]["assertions"]), editAssertions(jsonData["steps"][index]["variables"]), json.dumps(jsonData["steps"][index]["scripts"]) if "scripts" in jsonData["steps"][index] and jsonData["steps"][index]["scripts"] != [''] else [], json.dumps(jsonData["steps"][index]["before_scripts"]) if "before_scripts" in jsonData["steps"][index] else [], json.dumps(jsonData["steps"][index]["body"]) if "body" in jsonData["steps"][index] else "\"\"")
+}}\n\n""".format(index, editName(jsonData["name"]), editName(jsonData["name"]), jsonData["steps"][index]["step_type"], jsonData["steps"][index]["url"], jsonData["steps"][index]["method"], getHeaders(jsonData["steps"][index]["headers"], jsonData["id"], bucket["key"], access_token), editAssertions(jsonData["steps"][index]["assertions"]), editAssertions(jsonData["steps"][index]["variables"]), json.dumps(jsonData["steps"][index]["scripts"]) if "scripts" in jsonData["steps"][index] and jsonData["steps"][index]["scripts"] != [''] else [], json.dumps(jsonData["steps"][index]["before_scripts"]) if "before_scripts" in jsonData["steps"][index] else [], json.dumps(jsonData["steps"][index]["body"]) if "body" in jsonData["steps"][index] else "\"\"")
 	return result
 
 
@@ -99,15 +111,28 @@ def createTest(jsonData, bucketName):
 	return """resource \"runscope_test\" \"{}\" {{
 	name        = \"{}\"
 	description = {}
-	bucket_id   = \"${{runscope_bucket.{}.id}}\"
-}}\n\n""".format(editName(jsonData["name"]), editName(jsonData["name"]), json.dumps(jsonData["description"]) if jsonData["description"] != None else "\"\"", editName(bucketName))
+	bucket_id   = \"${{var.bucket_id}}\"
+}}\n\n""".format(editName(jsonData["name"]), jsonData["name"], json.dumps(jsonData["description"]) if jsonData["description"] != None else "\"\"")
 
 
 def createBucket(jsonData):
 	return """resource \"runscope_bucket\" \"{}\" {{
-	  name      = \"{}\"
-	  team_uuid = \"{}\"
+	name      = \"{}\"
+	team_uuid = \"{}\"
 }}\n\n""".format(editName(jsonData["name"]), jsonData["name"], jsonData["team"]["id"])
+
+def createModule(jsonData, folder):
+	return """module \"tests_{}\" {{
+	source    = \"./{}\"
+
+	bucket_id = \"${{runscope_bucket.{}.id}}\"
+}}""".format(editName(jsonData["name"]), folder, editName(jsonData["name"]))
+
+def createAttributes(folderName):
+	f = open(folderName + "/attributes.tf", "w")
+	f.write("""variable "bucket_id" {}""")
+	f.close()
+
 
 def getHeaders(headers, testID, bucketKey, access_token):
 	result = {}
@@ -159,9 +184,10 @@ def initprogressBar(length):
 	sys.stdout.write("\b" * (length))
 
 def progressBarStep(length, bucketName, index):
-	sys.stdout.write("#%s \033[95mCreating '%s.tf' file.\033[0m %s%%           " % ("_" * (length - (index+1)), bucketName, str(100*(index+1)/length)))
+	text = "#%s \033[95mCreated '%s.tf' file.\033[0m %s%%           " % ("_" * (length - (index+1)), bucketName, str(100*(index+1)/length))
+	sys.stdout.write(text)
 	sys.stdout.flush()
-	sys.stdout.write("\b" * (len(bucketName) + 33 + (length - index) + len(str(100*(index+1)/length))))
+	sys.stdout.write("\b" * (len(text) - 10))
 	sys.stdout.flush()
 
 
@@ -172,36 +198,41 @@ def makeInitFile(access_token):
 	f.write("""terraform {
   required_version = ">= 0.10.0"
 }
-
 provider "runscope" {
   access_token = "%s"
 }""" % (access_token))
 	f.close()
 	print("\n\033[92mOk\033[0m")
 
-def parse(access_token):
+def parse(access_token, numberOfTests):
 	buckets = getAllBuckets(access_token)
 	initprogressBar(len(buckets))
 	i = 0
 	for bucket in buckets:
-		result = ""
-		result += createBucket(bucket)
-		testsInBucket = getTestsFromBucket(bucket["key"], access_token)
+		folderName = createFolder(bucket["name"])
+		createAttributes(folderName)
+		resultBucket = ""
+		resultBucket += createBucket(bucket)
+		testsInBucket = getTestsFromBucket(bucket["key"], access_token, numberOfTests)
 		for test in testsInBucket:
+			result = ""
 			result += createTest(test, bucket["name"])
 			testDetail = getTestDetail(bucket["key"], test["id"], access_token)
 			result += createTestStep(testDetail, bucket, access_token)
 			result += createSchedule(testDetail, bucket)
+			createFileTest(result, folderName, test["name"])
 		enviroments = getSharedEnviroments(bucket["key"], access_token)
-		result += createEnvironment(enviroments, bucket["name"])
-		createNewFile(result, bucket["name"])
+		resultBucket += createEnvironment(enviroments, bucket["name"])
+		resultBucket += createModule(bucket, folderName)
+		createNewFile(resultBucket, bucket["name"])
 		progressBarStep(len(buckets), bucket["name"], i)
 		i += 1
 	print("\n\033[92mCompleted!\033[0m")
 
 def main():
-	access_token = input("Enter an access_token for runscope: ")
+	access_token  = input("Enter an access_token for runscope: ")
+	numberOfTests = input("How many tests you would like to get: ")
 	makeInitFile(access_token)
-	parse(access_token)
+	parse(access_token, numberOfTests)
 
 main()
