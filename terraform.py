@@ -128,8 +128,8 @@ def createModule(jsonData, folder):
 	bucket_id = \"${{runscope_bucket.{}.id}}\"
 }}""".format(editName(jsonData["name"]), folder, editName(jsonData["name"]))
 
-def createAttributes(folderName):
-	f = open(folderName + "/attributes.tf", "w")
+def createVariables(folderName):
+	f = open(folderName + "/variables.tf", "w")
 	f.write("""variable "bucket_id" {}""")
 	f.close()
 
@@ -210,7 +210,7 @@ def parse(access_token, numberOfTests):
 	i = 1
 	for bucket in buckets:
 		folderName = createFolder(bucket["name"])
-		createAttributes(folderName)
+		createVariables(folderName)
 		resultBucket = ""
 		resultBucket += createBucket(bucket)
 		testsInBucket = getTestsFromBucket(bucket["key"], access_token, numberOfTests)
