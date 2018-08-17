@@ -72,7 +72,7 @@ resource "runscope_step" "step0_Test" {
 	step_type      = "request"
 	url            = "https://{{environment}}example.com/{{apiVersion}}"
 	method         = "GET"
-	headers		   = {
+	headers	       = {
 		header   = "x-api-key"
 		value    = "adasdadlakdadlkajdakdjalksjdsadlakdsjk"
 	}
