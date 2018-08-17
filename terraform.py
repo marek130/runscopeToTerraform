@@ -214,7 +214,7 @@ def parse(access_token, numberOfTests):
 		resultBucket = ""
 		resultBucket += createBucket(bucket)
 		testsInBucket = getTestsFromBucket(bucket["key"], access_token, numberOfTests)
-		print("\n%d) Create folder %s and %d tests files:" % (i, editName(bucket["name"]), len(testsInBucket)))
+		print("\n%d) Create folder %s and %d test files:" % (i, editName(bucket["name"]), len(testsInBucket)))
 		for index, test in enumerate(testsInBucket):
 			result = ""
 			result += createTest(test, bucket["name"])
