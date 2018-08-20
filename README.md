@@ -12,6 +12,9 @@ This script will create folders with test files in a directory where the script 
 Parameters _webhooks_, _stop_on_failure_ and _emails_ are not supported in environments.
 
 # EXAMPLE #
+Make sure that all files (runscope.py and terraform.py) are in the same folder.
+Run script like this: ```python3 terraform.py```
+
 If bucket called ```MyBucket``` has one test called ```Test``` with one test step, the output of the script will look like this:
 
 File _MyBucket.tf_
