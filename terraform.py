@@ -203,7 +203,8 @@ def initprogressBar(length):
 	sys.stdout.write("\b\b\b")
 
 def progressBarStep(length, testName, index):
-	text = "#%s \033[95mCreated '%s.tf' file.\033[0m %s%%" % ("_" * (length - (index+1)), editName(testName), str(100*(index+1)/length)) + " " * 100
+	sys.stdout.write("\033[K") #clear line
+	text = "#%s \033[95mCreated '%s.tf' file.\033[0m %s%%" % ("_" * (length - (index+1)), editName(testName), str(100*(index+1)/length))
 	sys.stdout.write(text)
 	sys.stdout.flush()
 	sys.stdout.write("\b" * (len(text) - 10))
