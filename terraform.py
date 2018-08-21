@@ -1,119 +1,157 @@
-import requests
-import sys
-import os
-import runscope
+import json
 
-class RunscopeAPI(object):
-	"""docstring for RunscopeAPI"""
-	def __init__(self, access_token, count):
-		self.access_token = access_token
-		self.count        = count
-
-	def checkReturnedCode(self, jsonData):
-		if jsonData["meta"]["status"] != "success":
-			print("\n\033[91mResponse code: %s\nMessage: %s\033[0m" % (jsonData["error"]["status"], jsonData["error"]["message"]))
-
-	def getAllBuckets(self):
-		r = requests.get("https://api.runscope.com/buckets", headers={"Authorization":"Bearer %s" % (self.access_token)})
-		self.checkReturnedCode(r.json())
-		return [Bucket(jsonData) for jsonData in r.json()["data"]]
-
-
-	def getTestsFromBucket(self, bucket):
-		link = "https://api.runscope.com/buckets/" + bucket.jsonData["key"] + "/tests?count=" + self.count
-		r = requests.get(link, headers={"Authorization":"Bearer %s" % (self.access_token)})
-		self.checkReturnedCode(r.json())
-		bucket.tests = [Test(jsonData) for jsonData in r.json()["data"]]
-
-	def getTestDetail(self, bucket, test):
-		link = "https://api.runscope.com/buckets/" + bucket.jsonData["key"] + "/tests/" + test.jsonData["id"]
-		r = requests.get(link, headers={"Authorization":"Bearer %s" % (self.access_token)})
-		self.checkReturnedCode(r.json())
-		test.testDetail = r.json()["data"]
-
-	def getSharedEnvironments(self, bucket):
-		link = "https://api.runscope.com/buckets/" + bucket.jsonData["key"] + "/environments"
-		r = requests.get(link, headers={"Authorization":"Bearer %s" % (self.access_token)})
-		self.checkReturnedCode(r.json())
-		bucket.sharedEnvironments = r.json()["data"] # list of shared environments
+def createEnvironment(test, bucketName):
+	jsonData = test.testDetail
+	for environment in jsonData["environments"]:
+		test.dataToFile += """resource "runscope_environment" "{}_{}_{}" {{
+	bucket_id         = \"${{var.bucket_id}}\"
+	test_id           = \"${{runscope_test.{}.id}}\"
+	name              = \"{}\"
+	regions           = {}
+	retry_on_failure  = {}
+	initial_variables = {}
+	script            = {}
+	verify_ssl        = {}
+	preserve_cookies  = {}
+	integrations      = {}
+	remote_agents     = {}
+}}\n\n""".format(editName(bucketName), editName(jsonData["name"]), editName(environment["name"]), editName(jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}", json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), environment["remote_agents"])
 
 
-class Bucket(object):
-	"""docstring for Bucket"""
-	def __init__(self, jsonData):
-		self.jsonData           = jsonData
-		self.tests              = []
-		self.sharedEnvironments = []
-		self.dataToFile         = ""
+
+def createSharedEnvironment(bucket):
+	# parameters webhooks, stop_on_failure, emails and headers are not supported
+	for environment in bucket.sharedEnvironments:
+		bucket.dataToFile += """resource \"runscope_environment\" \"shared_environment_{}_{}\" {{
+	bucket_id         = \"${{runscope_bucket.{}.id}}\"
+	name              = \"{}\"
+	regions           = {}
+	retry_on_failure  = {}
+	initial_variables = {}
+	script            = {}
+	verify_ssl        = {}
+	preserve_cookies  = {}
+	integrations      = {}
+	remote_agents     = {}
+}}\n\n""".format(editName(bucket.jsonData["name"]), editName(environment["name"]), editName(bucket.jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}", json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), environment["remote_agents"])
 
 
-class Test(object):
-	def __init__(self, jsonData):
-		self.jsonData   = jsonData
-		self.testDetail = {}
-		self.dataToFile = ""
+def createSchedule(test):
+	jsonData = test.testDetail
+	for index, schedule in enumerate(jsonData["schedules"]):
+		test.dataToFile += """resource \"runscope_schedule\" \"schedule{}_{}\" {{
+	bucket_id      = \"${{var.bucket_id}}\"
+	test_id        = \"{}\"
+	interval       = \"{}\"
+	environment_id = \"{}\"
+	note           = \"{}\"
+}}\n\n""".format(index, editName(jsonData["name"]), jsonData["id"], schedule["interval"], schedule["environment_id"], schedule["note"] if schedule["note"] != None else "")
 
-def createNewFile(textToFile, fileName):
-	f = open(runscope.editName(fileName) + ".tf", "w")
-	f.write(textToFile)
+
+def createTestStep(test, bucket):
+	jsonData = test.testDetail
+	for index, step in enumerate(jsonData["steps"]):
+		test.dataToFile += """resource \"runscope_step\" \"step{}_{}\" {{
+	bucket_id      = \"${{var.bucket_id}}\"
+	test_id        = \"${{runscope_test.{}.id}}\"
+	step_type      = \"{}\"
+	url            = \"{}\"
+	method         = \"{}\"
+	{}
+	assertions     = [{}
+	]
+	variables      = [{}
+	]
+	scripts        = {}
+	before_scripts = {}
+	body           = {}
+}}\n\n""".format(index, editName(jsonData["name"]), editName(jsonData["name"]), step["step_type"], step["url"], step["method"], getHeaders(step["headers"], bucket), editAssertions(step["assertions"]), editAssertions(step["variables"]), json.dumps(step["scripts"]) if "scripts" in step and step["scripts"] != [''] else [], json.dumps(step["before_scripts"]) if "before_scripts" in step else [], json.dumps(step["body"]) if "body" in step else "\"\"")
+
+
+
+def createTest(test):
+	jsonData = test.jsonData
+	test.dataToFile += """resource \"runscope_test\" \"{}\" {{
+	name        = \"{}\"
+	description = {}
+	bucket_id   = \"${{var.bucket_id}}\"
+}}\n\n""".format(editName(jsonData["name"]), jsonData["name"], json.dumps(jsonData["description"]) if jsonData["description"] != None else "\"\"")
+
+
+def createBucket(bucket):
+	bucket.dataToFile += """resource \"runscope_bucket\" \"{}\" {{
+	name      = \"{}\"
+	team_uuid = \"{}\"
+}}\n\n""".format(editName(bucket.jsonData["name"]), bucket.jsonData["name"], bucket.jsonData["team"]["id"])
+
+def createModule(bucket, folder):
+	bucket.dataToFile += """module \"tests_{}\" {{
+	source    = \"./{}\"
+
+	bucket_id = \"${{runscope_bucket.{}.id}}\"
+}}""".format(editName(bucket.jsonData["name"]), folder, editName(bucket.jsonData["name"]))
+
+def makeInitFile(access_token):
+	print("\nCreating init file")
+	f = open("init.tf", "w")
+	f.write("""terraform {
+  required_version = ">= 0.10.0"
+}
+provider "runscope" {
+  access_token = "%s"
+}""" % (access_token))
 	f.close()
 
-
-def createFileTest(textToFile, folderName, fileName):
-	f = open(folderName + "/" + runscope.editName(fileName) + ".tf", "w")
-	f.write(textToFile)
+def createVariables(folderName):
+	f = open(folderName + "/variables.tf", "w")
+	f.write("""variable "bucket_id" {}""")
 	f.close()
 
-def createFolder(folderName):
-	newName = runscope.editName(folderName) + "_TESTS"
-	if not os.path.exists(newName):
-		os.makedirs(newName)
-	return newName
+def editAssertions(jsonText):
+	if type(jsonText) != list:
+		jsonText = [jsonText]
+	result = ""
+	for i in jsonText:
+		result += "\n\t  {\n"
+		for j in i.keys():
+			result += "\t    {} = \"{}\",\n".format(j, "" if i[j] == "\"\"" else i[j])
+		result += "\t  },"
+	return result
+
+def editName(fileName):
+	result = ""
+	for char in fileName:
+		if char in " /?":
+			result += "_"
+		elif not char.isalnum():
+			continue
+		else:
+			result += char
+	return result
+
+def getIntegrations(jsonData):
+	result = []
+	for i in jsonData:
+		result.append(i["id"])
+	return result
 
 
-def initprogressBar(length):
-	sys.stdout.write("\nWill creat %d folders with test files\n..." % (length))
-	sys.stdout.flush()
+def getHeaders(headers, bucket):
+	result = {}
+	for index in range(len(bucket.sharedEnvironments)):
+		if bucket.sharedEnvironments[index]["headers"] != None:
+			for key in bucket.sharedEnvironments[index]["headers"]:
+				bucket.sharedEnvironments[index]["headers"][key] = bucket.sharedEnvironments[index]["headers"][key].pop()
+			result.update(bucket.sharedEnvironments[index]["headers"])
+	if headers != None:
+		for key in headers:
+			headers[key] = headers[key].pop()
+		result.update(headers)
+	resultText = "headers\t\t   = {"
+	for key in result:
+		resultText += """
+		header   = \"{}\"
+		value    = \"{}\"\n""".format(key, result[key])
+	resultText += "\t}"
+	return "" if not result else resultText
 
-def progressBarStep(length, testName, index):
-	sys.stdout.write("\033[K") #clear line
-	text = "#%s \033[95mCreated '%s.tf' file.\033[0m %s%%" % ("_" * (length - (index+1)), runscope.editName(testName), str(100*(index+1)/length))
-	sys.stdout.write(text)
-	sys.stdout.flush()
-	sys.stdout.write("\b" * (len(text) - 10))
-	sys.stdout.flush()
-
-
-def parse(access_token, numberOfTests):
-	api = RunscopeAPI(access_token, numberOfTests)
-	buckets = api.getAllBuckets()
-	initprogressBar(len(buckets))
-	i = 1
-	for bucket in buckets:
-		folderName = createFolder(bucket.jsonData["name"])
-		runscope.createVariables(folderName)
-		runscope.createBucket(bucket)
-		api.getTestsFromBucket(bucket)
-		print("\n%d) Create folder %s and %d test files:" % (i, runscope.editName(bucket.jsonData["name"]), len(bucket.tests)))
-		for index, test in enumerate(bucket.tests):
-			runscope.createTest(test)
-			api.getTestDetail(bucket, test)
-			runscope.createTestStep(test, bucket)
-			runscope.createSchedule(test)
-			runscope.createEnvironment(test, bucket.jsonData["name"])
-			createFileTest(test.dataToFile, folderName, test.jsonData["name"])
-			progressBarStep(len(bucket.tests), test.jsonData["name"], index)
-		api.getSharedEnvironments(bucket)
-		runscope.createSharedEnvironment(bucket)
-		runscope.createModule(bucket, folderName)
-		createNewFile(bucket.dataToFile, bucket.jsonData["name"])
-		i += 1
-	print("\n\033[92mCompleted!\033[0m")
-
-def main():
-	access_token  = input("Enter an access_token for runscope: ")
-	numberOfTests = input("How many tests you would like to get from every bucket: ")
-	runscope.makeInitFile(access_token)
-	parse(access_token, numberOfTests)
-
-main()
