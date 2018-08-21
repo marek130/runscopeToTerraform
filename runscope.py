@@ -40,11 +40,11 @@ def createSchedule(test):
 	jsonData = test.testDetail
 	for index, schedule in enumerate(jsonData["schedules"]):
 		test.dataToFile += """resource \"runscope_schedule\" \"schedule{}_{}\" {{
-		bucket_id      = \"${{var.bucket_id}}\"
-		test_id        = \"{}\"
-		interval       = \"{}\"
-		environment_id = \"{}\"
-		note           = \"{}\"
+	bucket_id      = \"${{var.bucket_id}}\"
+	test_id        = \"{}\"
+	interval       = \"{}\"
+	environment_id = \"{}\"
+	note           = \"{}\"
 }}\n\n""".format(index, editName(jsonData["name"]), jsonData["id"], schedule["interval"], schedule["environment_id"], schedule["note"] if schedule["note"] != None else "")
 
 
