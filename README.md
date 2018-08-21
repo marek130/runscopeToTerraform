@@ -1,5 +1,5 @@
 # runscopeToTerraform
-Description: _python script to convert runscope buckets to terraform files._
+Description: _a python script to convert runscope buckets to terraform files._
 
 **Requires: python3 interpreter.**
 
