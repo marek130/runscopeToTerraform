@@ -10,7 +10,7 @@ class RunscopeAPI(object):
 		self.count        = count
 
 	def checkReturnedCode(self, jsonData):
-		if jsonData["meta"]["status"] != "success":
+		if jsonData["error"] != None:
 			print("\n\033[91mResponse code: %s\nMessage: %s\033[0m" % (jsonData["error"]["status"], jsonData["error"]["message"]))
 
 	def getAllBuckets(self):
