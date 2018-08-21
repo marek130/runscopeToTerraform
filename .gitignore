@@ -3,3 +3,4 @@
 *.tf
 __pycache__
 ftplan
+terraform.tfstate
