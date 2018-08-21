@@ -11,7 +11,7 @@ class RunscopeAPI(object):
 
 	def checkReturnedCode(self, jsonData):
 		if jsonData["error"] != None:
-			print("\n\033[91mResponse code: %s\nMessage: %s\033[0m" % (jsonData["error"]["status"], jsonData["error"]["message"]))
+			print("\n\033[91mResponse code: %s\nMessage: %s\033[0m" % (jsonData["error"]["status"] if "status" in jsonData["error"] else jsonData["meta"]["status"], jsonData["error"]["message"]))
 
 	def getAllBuckets(self):
 		r = requests.get("https://api.runscope.com/buckets", headers={"Authorization":"Bearer %s" % (self.access_token)})
