@@ -18,7 +18,6 @@ class RunscopeAPI(object):
 		self.checkReturnedCode(r.json())
 		return [Bucket(jsonData) for jsonData in r.json()["data"]]
 
-
 	def getTestsFromBucket(self, bucket):
 		link = "https://api.runscope.com/buckets/" + bucket.jsonData["key"] + "/tests?count=" + self.count
 		r = requests.get(link, headers={"Authorization":"Bearer %s" % (self.access_token)})
@@ -45,6 +44,7 @@ class Bucket(object):
 		self.tests              = []
 		self.sharedEnvironments = []
 		self.dataToFile         = ""
+		self.editedEnvironments = False
 
 
 class Test(object):
@@ -94,6 +94,7 @@ def parse(access_token, numberOfTests):
 		terraform.createVariables(folderName)
 		terraform.createBucket(bucket)
 		api.getTestsFromBucket(bucket)
+		api.getSharedEnvironments(bucket)
 		print("\n%d) Create folder %s and %d test files:" % (i, terraform.editName(bucket.jsonData["name"]), len(bucket.tests)))
 		for index, test in enumerate(bucket.tests):
 			terraform.createTest(test)
@@ -103,7 +104,6 @@ def parse(access_token, numberOfTests):
 			terraform.createEnvironment(test, bucket.jsonData["name"])
 			createFileTest(test.dataToFile, folderName, test.jsonData["name"])
 			progressBarStep(len(bucket.tests), test.jsonData["name"], index)
-		api.getSharedEnvironments(bucket)
 		terraform.createSharedEnvironment(bucket)
 		terraform.createModule(bucket, folderName)
 		createNewFile(bucket.dataToFile, bucket.jsonData["name"])

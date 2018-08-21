@@ -136,16 +136,23 @@ def getIntegrations(jsonData):
 	return result
 
 
+def editEnvironments(bucket):
+	bucket.editedEnvironments = True
+	for environment in bucket.sharedEnvironments:
+		if environment["headers"] != None:
+			for key in environment["headers"]:
+				environment["headers"][key] = environment["headers"][key].pop() # we get array with value (['value']), but we just want a single value
+
 def getHeaders(headers, bucket):
 	result = {}
-	for index in range(len(bucket.sharedEnvironments)):
-		if bucket.sharedEnvironments[index]["headers"] != None:
-			for key in bucket.sharedEnvironments[index]["headers"]:
-				bucket.sharedEnvironments[index]["headers"][key] = bucket.sharedEnvironments[index]["headers"][key].pop()
-			result.update(bucket.sharedEnvironments[index]["headers"])
+	if not bucket.editedEnvironments:
+		editEnvironments(bucket)
+	for env in bucket.sharedEnvironments: 
+		if env["headers"] != None: result.update(env["headers"])
+
 	if headers != None:
 		for key in headers:
-			headers[key] = headers[key].pop()
+			headers[key] = headers[key].pop() # we get array with value (['value']), but we just want a single value
 		result.update(headers)
 	resultText = "headers\t\t   = {"
 	for key in result:
