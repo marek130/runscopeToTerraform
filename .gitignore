@@ -1,0 +1,5 @@
+*_TESTS
+.terraform
+*.tf
+__pycache__
+ftplan

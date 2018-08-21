@@ -72,11 +72,8 @@ def createFolder(folderName):
 
 
 def initprogressBar(length):
-	sys.stdout.write("\n")
-	# setup toolbar
-	sys.stdout.write("Will creat %d folders with test files\n..." % (length))
+	sys.stdout.write("\nWill creat %d folders with test files\n..." % (length))
 	sys.stdout.flush()
-	sys.stdout.write("\b\b\b")
 
 def progressBarStep(length, testName, index):
 	sys.stdout.write("\033[K") #clear line

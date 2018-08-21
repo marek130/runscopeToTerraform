@@ -101,7 +101,6 @@ provider "runscope" {
   access_token = "%s"
 }""" % (access_token))
 	f.close()
-	print("\n\033[92mOk\033[0m")
 
 def createVariables(folderName):
 	f = open(folderName + "/variables.tf", "w")
