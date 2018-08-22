@@ -4,7 +4,7 @@ import os
 import terraform
 
 class RunscopeAPI(object):
-	"""docstring for RunscopeAPI"""
+
 	def __init__(self, access_token, count):
 		self.access_token = access_token
 		self.count        = count
@@ -38,7 +38,7 @@ class RunscopeAPI(object):
 
 
 class Bucket(object):
-	"""docstring for Bucket"""
+
 	def __init__(self, jsonData):
 		self.jsonData           = jsonData
 		self.tests              = []
@@ -48,6 +48,7 @@ class Bucket(object):
 
 
 class Test(object):
+
 	def __init__(self, jsonData):
 		self.jsonData   = jsonData
 		self.testDetail = {}
