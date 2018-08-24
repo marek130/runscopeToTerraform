@@ -1,7 +1,7 @@
 import json
 
 def createEnvironment(test, bucketName):
-	# parameters webhooks, stop_on_failure, emails and headers are not supported
+	# parameter stop_on_failure is not supported
 	jsonData = test.testDetail
 	for environment in jsonData["environments"]:
 		test.dataToFile += """resource "runscope_environment" "{}_{}_{}" {{
@@ -31,7 +31,7 @@ def createEnvironment(test, bucketName):
 
 
 def createSharedEnvironment(bucket):
-	# parameters webhooks, stop_on_failure, emails and headers are not supported
+	# parameter stop_on_failure is not supported
 	for environment in bucket.sharedEnvironments:
 		bucket.dataToFile += """resource \"runscope_environment\" \"shared_environment_{}_{}\" {{
 	bucket_id               = \"${{runscope_bucket.{}.id}}\"
