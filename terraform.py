@@ -21,7 +21,7 @@ def createEnvironment(test, bucket):
 
 
 def createSharedEnvironment(bucket):
-	# parameters stop_on_failureand headers are not supported
+	# parameters stop_on_failure and headers are not supported
 	for environment in bucket.sharedEnvironments:
 		bucket.dataToFile += """resource \"runscope_environment\" \"shared_environment_{}_{}\" {{
 	bucket_id               = \"${{runscope_bucket.{}.id}}\"
