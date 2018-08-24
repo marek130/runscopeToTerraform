@@ -9,7 +9,7 @@ After running the script you will need to enter an **access_token** for runscope
 
 This script will create folders with test files in a directory where the script is located.
 
-Parameters _webhooks_, _stop_on_failure_ and _emails_ are not supported in environments.
+By dafault parameters _webhooks_, _stop_on_failure_ and _emails_ are not supported in environments. If you want to use __webhooks__ and __emails__ use my version of [terraform-provider-runscope](https://github.com/marek130/terraform-provider-runscope).
 
 # EXAMPLE #
 Make sure that all files (converter.py and terraform.py) are in the same folder.
@@ -43,6 +43,17 @@ resource "runscope_environment" "shared_environment_MyBucket" {
 	preserve_cookies  = false
 	integrations      = []
 	remote_agents     = []
+	webhooks          = []
+    	emails            = 
+          {
+      	    notify_all       = false
+      	    notify_on        = ""
+      	    notify_threshold = 0
+
+      	    recipients       = [
+      	    ]
+
+         }
 }
 
 module "tests_MyBucket" {
@@ -117,5 +128,16 @@ resource "runscope_environment" "MyBucket_Test_Test_Settings" {
 	preserve_cookies  = false
 	integrations      = []
 	remote_agents     = []
+	webhooks          = []
+    	emails            = 
+          {
+      	    notify_all       = false
+      	    notify_on        = ""
+      	    notify_threshold = 0
+
+      	    recipients       = [
+      	    ]
+
+         }
 }
 ```
