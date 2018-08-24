@@ -1,8 +1,8 @@
 import json
 
-def createEnvironment(test, bucketName):
-	# parameters webhooks, stop_on_failure, emails and headers are not supported
-	jsonData = test.testDetail
+def createEnvironment(test, bucket):
+	# parameters stop_on_failure and headers are not supported
+	jsonData = test.testDetail 
 	for environment in jsonData["environments"]:
 		test.dataToFile += """resource "runscope_environment" "{}_{}_{}" {{
 	bucket_id               = \"${{var.bucket_id}}\"
@@ -16,22 +16,12 @@ def createEnvironment(test, bucketName):
 	preserve_cookies        = {}
 	integrations            = {}
 	remote_agents           = {}
-    webhooks                = {}
-    emails                  = 
-      {{
-      	notify_all       = {}
-      	notify_on        = \"{}\"
-      	notify_threshold = {}
-
-      	recipients       = [{}
-      	]
-
-      }}
-}}\n\n""".format(editName(bucketName), editName(jsonData["name"]), editName(environment["name"]), editName(jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}", json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), editAssertions(environment["remote_agents"]) if len(environment["remote_agents"]) > 0 else [], json.dumps(environment["webhooks"]) if environment["webhooks"] != None else [], str(environment["emails"]["notify_all"]).lower(), environment["emails"]["notify_on"] if environment["emails"]["notify_on"] != None else "", environment["emails"]["notify_threshold"], editAssertions(environment["emails"]["recipients"]))
+	{}
+}}\n\n""".format(editName(bucket.jsonData["name"]), editName(jsonData["name"]), editName(environment["name"]), editName(jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}", json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), editAssertions(environment["remote_agents"]) if len(environment["remote_agents"]) > 0 else [], extension(environment) if bucket.extension else "")
 
 
 def createSharedEnvironment(bucket):
-	# parameters webhooks, stop_on_failure, emails and headers are not supported
+	# parameters stop_on_failureand headers are not supported
 	for environment in bucket.sharedEnvironments:
 		bucket.dataToFile += """resource \"runscope_environment\" \"shared_environment_{}_{}\" {{
 	bucket_id               = \"${{runscope_bucket.{}.id}}\"
@@ -44,18 +34,8 @@ def createSharedEnvironment(bucket):
 	preserve_cookies        = {}
 	integrations            = {}
 	remote_agents           = {}
-    webhooks                = {}
-    emails                  = 
-      {{
-      	notify_all       = {}
-      	notify_on        = \"{}\"
-      	notify_threshold = {}
-
-      	recipients       = [{}
-      	]
-
-      }}
-}}\n\n""".format(editName(bucket.jsonData["name"]), editName(environment["name"]), editName(bucket.jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}", json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), editAssertions(environment["remote_agents"]) if len(environment["remote_agents"]) > 0 else [], json.dumps(environment["webhooks"]) if environment["webhooks"] != None else [], str(environment["emails"]["notify_all"]).lower(), environment["emails"]["notify_on"] if environment["emails"]["notify_on"] != None else "", environment["emails"]["notify_threshold"], editAssertions(environment["emails"]["recipients"]))
+  	{}
+}}\n\n""".format(editName(bucket.jsonData["name"]), editName(environment["name"]), editName(bucket.jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}", json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), editAssertions(environment["remote_agents"]) if len(environment["remote_agents"]) > 0 else [], extension(environment) if bucket.extension else "")
 
 
 def createSchedule(test):
@@ -163,6 +143,20 @@ def editEnvironments(bucket):
 		if environment["headers"] != None:
 			for key in environment["headers"]:
 				environment["headers"][key] = environment["headers"][key].pop() # we get array with value ['value'], but we just want a single value
+
+def extension(environment):
+	return """
+	webhooks                = {}
+    emails                  = 
+      {{
+      	notify_all       = {}
+      	notify_on        = \"{}\"
+      	notify_threshold = {}
+
+      	recipients       = [{}
+      	]
+
+      }}""".format(json.dumps(environment["webhooks"]) if environment["webhooks"] != None else [], str(environment["emails"]["notify_all"]).lower(), environment["emails"]["notify_on"] if environment["emails"]["notify_on"] != None else "", environment["emails"]["notify_threshold"], editAssertions(environment["emails"]["recipients"]))
 
 def getHeaders(headers, bucket):
 	result = {}

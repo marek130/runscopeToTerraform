@@ -13,10 +13,10 @@ class RunscopeAPI(object):
 		if jsonData["error"] != None:
 			print("\n\033[91mResponse code: %s\nMessage: %s\033[0m" % (jsonData["error"]["status"] if "status" in jsonData["error"] else jsonData["meta"]["status"], jsonData["error"]["message"]))
 
-	def getAllBuckets(self):
+	def getAllBuckets(self, extension):
 		r = requests.get("https://api.runscope.com/buckets", headers={"Authorization":"Bearer %s" % (self.access_token)})
 		self.checkReturnedCode(r.json())
-		return [Bucket(jsonData) for jsonData in r.json()["data"]]
+		return [Bucket(jsonData, extension) for jsonData in r.json()["data"]]
 
 	def getTestsFromBucket(self, bucket):
 		link = "https://api.runscope.com/buckets/" + bucket.jsonData["key"] + "/tests?count=" + self.count
@@ -39,12 +39,13 @@ class RunscopeAPI(object):
 
 class Bucket(object):
 
-	def __init__(self, jsonData):
+	def __init__(self, jsonData, extension):
 		self.jsonData           = jsonData
 		self.tests              = []
 		self.sharedEnvironments = []
 		self.dataToFile         = ""
 		self.editedEnvironments = False
+		self.extension          = extension # if parameters webhooks and emails will included
 
 
 class Test(object):
@@ -85,9 +86,9 @@ def progressBarStep(length, testName, index):
 	sys.stdout.flush()
 
 
-def parse(access_token, numberOfTests):
+def parse(access_token, numberOfTests, extension):
 	api = RunscopeAPI(access_token, numberOfTests)
-	buckets = api.getAllBuckets()
+	buckets = api.getAllBuckets(extension)
 	initprogressBar(len(buckets))
 	i = 1
 	for bucket in buckets:
@@ -102,7 +103,7 @@ def parse(access_token, numberOfTests):
 			api.getTestDetail(bucket, test)
 			terraform.createTestStep(test, bucket)
 			terraform.createSchedule(test)
-			terraform.createEnvironment(test, bucket.jsonData["name"])
+			terraform.createEnvironment(test, bucket)
 			createFileTest(test.dataToFile, folderName, test.jsonData["name"])
 			progressBarStep(len(bucket.tests), test.jsonData["name"], index)
 		terraform.createSharedEnvironment(bucket)
@@ -114,7 +115,9 @@ def parse(access_token, numberOfTests):
 def main():
 	access_token  = input("Enter an access_token for runscope: ")
 	numberOfTests = input("How many tests you would like to get from every bucket: ")
+	extension     = input("Do you want to use webhooks and emails?[y/n] ")
+	extension = extension == "y"
 	terraform.makeInitFile(access_token)
-	parse(access_token, numberOfTests)
+	parse(access_token, numberOfTests, extension)
 
 main()
