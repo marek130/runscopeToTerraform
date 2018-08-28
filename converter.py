@@ -43,6 +43,7 @@ class Bucket(object):
 		self.jsonData           = jsonData
 		self.tests              = []
 		self.sharedEnvironments = []
+		self.allEnvironments    = {}
 		self.dataToFile         = ""
 		self.editedEnvironments = False
 		self.extension          = extension # if parameters webhooks and emails will included
@@ -93,20 +94,21 @@ def parse(access_token, numberOfTests, extension):
 	i = 1
 	for bucket in buckets:
 		folderName = createFolder(bucket.jsonData["name"])
-		terraform.createVariables(folderName)
 		terraform.createBucket(bucket)
 		api.getTestsFromBucket(bucket)
 		api.getSharedEnvironments(bucket)
+		terraform.createSharedEnvironment(bucket)
+		#terraform.createIntegrations(bucket)
+		terraform.createVariables(folderName,  bucket)
 		print("\n%d) Create folder %s and %d test files:" % (i, terraform.editName(bucket.jsonData["name"]), len(bucket.tests)))
 		for index, test in enumerate(bucket.tests):
 			terraform.createTest(test)
 			api.getTestDetail(bucket, test)
 			terraform.createTestStep(test, bucket)
-			terraform.createSchedule(test)
 			terraform.createEnvironment(test, bucket)
+			terraform.createSchedule(test, bucket)
 			createFileTest(test.dataToFile, folderName, test.jsonData["name"])
 			progressBarStep(len(bucket.tests), test.jsonData["name"], index)
-		terraform.createSharedEnvironment(bucket)
 		terraform.createModule(bucket, folderName)
 		createNewFile(bucket.dataToFile, bucket.jsonData["name"])
 		i += 1

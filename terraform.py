@@ -4,6 +4,7 @@ def createEnvironment(test, bucket):
 	# parameters stop_on_failure and headers are not supported
 	jsonData = test.testDetail 
 	for environment in jsonData["environments"]:
+		bucket.allEnvironments[environment["id"]] = "runscope_environment." + editName(bucket.jsonData["name"]) + "_" + editName(jsonData["name"]) + "_" + editName(environment["name"]) + ".id"
 		test.dataToFile += """resource "runscope_environment" "{}_{}_{}" {{
 	bucket_id               = \"${{var.bucket_id}}\"
 	test_id                 = \"${{runscope_test.{}.id}}\"
@@ -23,6 +24,7 @@ def createEnvironment(test, bucket):
 def createSharedEnvironment(bucket):
 	# parameters stop_on_failureand headers are not supported
 	for environment in bucket.sharedEnvironments:
+		bucket.allEnvironments[environment["id"]] = "var.shared_environment_" + editName(bucket.jsonData["name"]) + "_" + editName(environment["name"])
 		bucket.dataToFile += """resource \"runscope_environment\" \"shared_environment_{}_{}\" {{
 	bucket_id               = \"${{runscope_bucket.{}.id}}\"
 	name                    = \"{}\"
@@ -38,17 +40,23 @@ def createSharedEnvironment(bucket):
 }}\n\n""".format(editName(bucket.jsonData["name"]), editName(environment["name"]), editName(bucket.jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}", json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), editAssertions(environment["remote_agents"]) if len(environment["remote_agents"]) > 0 else [], extension(environment) if bucket.extension else "")
 
 
-def createSchedule(test):
+
+def createSchedule(test, bucket):
 	jsonData = test.testDetail
 	for index, schedule in enumerate(jsonData["schedules"]):
 		test.dataToFile += """resource \"runscope_schedule\" \"schedule{}_{}\" {{
 	bucket_id      = \"${{var.bucket_id}}\"
-	test_id        = \"{}\"
+	test_id        = \"${{runscope_test.{}.id}}\"
 	interval       = \"{}\"
-	environment_id = \"{}\"
+	environment_id = \"${{{}}}\"
 	note           = \"{}\"
-}}\n\n""".format(index, editName(jsonData["name"]), jsonData["id"], schedule["interval"], schedule["environment_id"], schedule["note"] if schedule["note"] != None else "")
+}}\n\n""".format(index, editName(jsonData["name"]), editName(jsonData["name"]), schedule["interval"], bucket.allEnvironments[schedule["environment_id"]], schedule["note"] if schedule["note"] != None else "")
 
+def createIntegrations(bucket):
+	bucket.dataToFile += """data "runscope_integration" "slack_{}" {{
+  	team_uuid = "{}"
+  	type = "slack"
+}}\n\n""".format(editName(bucket.jsonData["name"]), bucket.jsonData["team"]["id"])
 
 def createTestStep(test, bucket):
 	jsonData = test.testDetail
@@ -87,25 +95,42 @@ def createBucket(bucket):
 
 def createModule(bucket, folder):
 	bucket.dataToFile += """module \"tests_{}\" {{
-	source    = \"./{}\"
+	source         = \"./{}\"
 
-	bucket_id = \"${{runscope_bucket.{}.id}}\"
-}}""".format(editName(bucket.jsonData["name"]), folder, editName(bucket.jsonData["name"]))
+	bucket_id      = \"${{runscope_bucket.{}.id}}\"
+	{}
+}}""".format(editName(bucket.jsonData["name"]), folder, editName(bucket.jsonData["name"]), getSharedEnv(bucket))
+
+
+def getSharedEnv(bucket):
+	result = ""
+	for env in bucket.sharedEnvironments:
+		result += "shared_environment_" + editName(bucket.jsonData["name"]) + "_" + editName(env["name"]) + " = \"${runscope_environment.shared_environment_" + editName(bucket.jsonData["name"]) + "_" + editName(env["name"]) + ".id}\"\n"
+	return result
+
+
 
 def makeInitFile(access_token):
 	print("\nCreating init file")
 	f = open("init.tf", "w")
-	f.write("""terraform {
-  required_version = ">= 0.10.0"
-}
-provider "runscope" {
+	f.write("""provider "runscope" {
   access_token = "%s"
 }""" % (access_token))
 	f.close()
 
-def createVariables(folderName):
+
+def getIntegrations(jsonData):
+	result = []
+	for i in jsonData:
+		result.append(i["id"])
+	return result
+
+def createVariables(folderName, bucket):
 	f = open(folderName + "/variables.tf", "w")
-	f.write("""variable "bucket_id" {}""")
+	sharedEnvironments = ""
+	for env in bucket.sharedEnvironments:
+		sharedEnvironments += """variable "{}" {{}}\n""".format("shared_environment_" + editName(bucket.jsonData["name"]) + "_" + editName(env["name"]))
+	f.write("""variable "bucket_id" {{}}\n{}""".format(sharedEnvironments))
 	f.close()
 
 def editAssertions(jsonText):
@@ -128,12 +153,6 @@ def editName(fileName):
 			continue
 		else:
 			result += char
-	return result
-
-def getIntegrations(jsonData):
-	result = []
-	for i in jsonData:
-		result.append(i["id"])
 	return result
 
 

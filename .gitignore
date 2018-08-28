@@ -4,3 +4,4 @@
 __pycache__
 ftplan
 terraform.tfstate
+terraform.tfstate.backup
