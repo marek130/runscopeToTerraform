@@ -19,7 +19,7 @@ Make sure that all files (converter.py and terraform.py) are in the same folder.
 If bucket called ```MyBucket``` has one test called ```Test``` with one test step, the output of the script will look like this:
 
 File _MyBucket.tf_
-
+(with enabled webhooks and emails)
 ```terraform
 #create resource of type bucket
 resource "runscope_bucket" "MyBucket" {
@@ -73,7 +73,7 @@ Folder _MyBucket_TESTS_ will look like this:
 ```
 
 File _Test.tf_ looks like this:
-
+(with enabled webhooks and emails)
 ```terafform
 resource "runscope_test" "Test" {
 	name        = "Test"

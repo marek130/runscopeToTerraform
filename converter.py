@@ -46,7 +46,7 @@ class Bucket(object):
 		self.allEnvironments    = {}
 		self.dataToFile         = ""
 		self.editedEnvironments = False
-		self.extension          = extension # if parameters webhooks and emails will included
+		self.extension          = extension # if parameters webhooks and emails will be included
 
 
 class Test(object):
