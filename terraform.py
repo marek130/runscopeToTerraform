@@ -1,7 +1,6 @@
 import json
 
 def createEnvironment(test, bucket):
-	# parameters stop_on_failure and headers are not supported
 	jsonData = test.testDetail 
 	for environment in jsonData["environments"]:
 		bucket.allEnvironments[environment["id"]] = "runscope_environment." + editName(bucket.jsonData["name"]) + "_" + editName(jsonData["name"]) + "_" + editName(environment["name"]) + ".id"
@@ -18,11 +17,10 @@ def createEnvironment(test, bucket):
 	integrations            = {}
 	remote_agents           = {}
 	{}
-}}\n\n""".format(editName(bucket.jsonData["name"]), editName(jsonData["name"]), editName(environment["name"]), editName(jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}", json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), editAssertions(environment["remote_agents"]) if len(environment["remote_agents"]) > 0 else [], extension(environment) if bucket.extension else "")
+}}\n\n""".format(editName(bucket.jsonData["name"]), editName(jsonData["name"]), editName(environment["name"]), editName(jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), (editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}") if environment["parent_environment_id"] == None else editAssertions(getIntialValues(environment["parent_environment_id"], bucket.sharedEnvironments)), json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), editAssertions(environment["remote_agents"]) if len(environment["remote_agents"]) > 0 else [], extension(environment) if bucket.extension else "")
 
 
 def createSharedEnvironment(bucket):
-	# parameters stop_on_failure and headers are not supported
 	for environment in bucket.sharedEnvironments:
 		bucket.allEnvironments[environment["id"]] = "var.shared_environment_" + editName(bucket.jsonData["name"]) + "_" + editName(environment["name"])
 		bucket.dataToFile += """resource \"runscope_environment\" \"shared_environment_{}_{}\" {{
@@ -52,11 +50,13 @@ def createSchedule(test, bucket):
 	note           = \"{}\"
 }}\n\n""".format(index, editName(jsonData["name"]), editName(jsonData["name"]), schedule["interval"], bucket.allEnvironments[schedule["environment_id"]], schedule["note"] if schedule["note"] != None else "")
 
+
 def createIntegrations(bucket):
 	bucket.dataToFile += """data "runscope_integration" "slack_{}" {{
   	team_uuid = "{}"
   	type = "slack"
 }}\n\n""".format(editName(bucket.jsonData["name"]), bucket.jsonData["team"]["id"])
+
 
 def createTestStep(test, bucket):
 	jsonData = test.testDetail
@@ -75,7 +75,8 @@ def createTestStep(test, bucket):
 	scripts        = {}
 	before_scripts = {}
 	body           = {}
-}}\n\n""".format(index, editName(jsonData["name"]), editName(jsonData["name"]), step["step_type"], step["url"], step["method"], getHeaders(step["headers"], bucket), editAssertions(step["assertions"]), editAssertions(step["variables"]), json.dumps(step["scripts"]) if "scripts" in step and step["scripts"] != [''] else [], json.dumps(step["before_scripts"]) if "before_scripts" in step else [], json.dumps(step["body"]) if "body" in step else "\"\"")
+	{}
+}}\n\n""".format(index, editName(jsonData["name"]), editName(jsonData["name"]), step["step_type"], step["url"], step["method"], getHeaders(jsonData, step["headers"], bucket), editAssertions(step["assertions"]), editAssertions(step["variables"]), json.dumps(step["scripts"]) if "scripts" in step and step["scripts"] != [''] else [], json.dumps(step["before_scripts"]) if "before_scripts" in step else [], json.dumps(step["body"]) if "body" in step else "\"\"", dependsOn(index, jsonData["name"]))
 
 
 def createTest(test):
@@ -155,6 +156,16 @@ def editName(fileName):
 			result += char
 	return result
 
+def dependsOn(index, stepName):
+	if index != 0:
+		return """depends_on  = ["{}{}_{}"]""".format("runscope_step.step", index -1, editName(stepName))
+	else:
+		return ""
+
+def getIntialValues(envID, sharedEnvironments):
+	for sharedEnv in sharedEnvironments:
+		if envID == sharedEnv["id"]:
+			return sharedEnv["initial_variables"]
 
 def editEnvironments(bucket):
 	bucket.editedEnvironments = True
@@ -177,12 +188,26 @@ def extension(environment):
 
       }}""".format(json.dumps(environment["webhooks"]) if environment["webhooks"] != None else [], str(environment["emails"]["notify_all"]).lower(), environment["emails"]["notify_on"] if environment["emails"]["notify_on"] != None else "", environment["emails"]["notify_threshold"], editAssertions(environment["emails"]["recipients"]))
 
-def getHeaders(headers, bucket):
+
+def useSharedEnv(jsonData, sharedEnvironments):
+	for schedule in jsonData["schedules"]:
+		envID = schedule["environment_id"]
+		for sharedEnv in sharedEnvironments:
+			if envID == sharedEnv["id"]:
+				return True
+			for env in jsonData["environments"]:
+				if env["parent_environment_id"] == sharedEnv["id"]:
+					return True
+	return False
+
+
+def getHeaders(jsonData, headers, bucket):
 	result = {}
-	if not bucket.editedEnvironments:
-		editEnvironments(bucket)
-	for env in bucket.sharedEnvironments: 
-		if env["headers"] != None: result.update(env["headers"])
+	if useSharedEnv(jsonData, bucket.sharedEnvironments):
+		if not bucket.editedEnvironments:
+			editEnvironments(bucket)
+		for env in bucket.sharedEnvironments: 
+			if env["headers"] != None: result.update(env["headers"])
 
 	if headers != None:
 		for key in headers:
