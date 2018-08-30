@@ -118,7 +118,7 @@ def main():
 	numberOfTests = input("How many tests you would like to get from every bucket: ")
 	extension     = input("Do you want to use webhooks and emails?[y/n] ")
 	extension = extension == "y"
-	terraform.makeInitFile(access_token)
+	terraform.makeMainFile(access_token)
 	parse(access_token, numberOfTests, extension)
 
 main()

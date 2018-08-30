@@ -104,9 +104,9 @@ def getSharedEnv(bucket):
 
 
 
-def makeInitFile(access_token):
+def makeMainFile(access_token):
 	print("\nCreating init file")
-	f = open("init.tf", "w")
+	f = open("main.tf", "w")
 	f.write("""provider "runscope" {
   access_token = "%s"
 }""" % (access_token))
