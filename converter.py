@@ -44,7 +44,7 @@ class Bucket(object):
 		self.tests              = []
 		self.sharedEnvironments = []
 		self.allEnvironments    = {}
-		self.dataToFile         = ""
+		self.dataToFile         = "" # data which will be written into a file
 		self.editedEnvironments = False
 		self.extension          = extension # if parameters webhooks and emails will be included
 
@@ -54,7 +54,7 @@ class Test(object):
 	def __init__(self, jsonData):
 		self.jsonData   = jsonData
 		self.testDetail = {}
-		self.dataToFile = ""
+		self.dataToFile = "" # data which will be written into a file
 
 def createNewFile(textToFile, fileName):
 	f = open(terraform.editName(fileName) + ".tf", "w")
@@ -98,7 +98,6 @@ def parse(access_token, numberOfTests, extension):
 		api.getTestsFromBucket(bucket)
 		api.getSharedEnvironments(bucket)
 		terraform.createSharedEnvironment(bucket)
-		#terraform.createIntegrations(bucket)
 		terraform.createVariables(folderName,  bucket)
 		print("\n%d) Create folder %s and %d test files:" % (i, terraform.editName(bucket.jsonData["name"]), len(bucket.tests)))
 		for index, test in enumerate(bucket.tests):

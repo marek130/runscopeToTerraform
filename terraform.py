@@ -51,13 +51,6 @@ def createSchedule(test, bucket):
 }}\n\n""".format(index, editName(jsonData["name"]), editName(jsonData["name"]), schedule["interval"], bucket.allEnvironments[schedule["environment_id"]], schedule["note"] if schedule["note"] != None else "")
 
 
-def createIntegrations(bucket):
-	bucket.dataToFile += """data "runscope_integration" "slack_{}" {{
-  	team_uuid = "{}"
-  	type = "slack"
-}}\n\n""".format(editName(bucket.jsonData["name"]), bucket.jsonData["team"]["id"])
-
-
 def createTestStep(test, bucket):
 	jsonData = test.testDetail
 	for index, step in enumerate(jsonData["steps"]):
@@ -158,7 +151,7 @@ def editName(fileName):
 
 def dependsOn(index, stepName):
 	if index != 0:
-		return """depends_on  = ["{}{}_{}"]""".format("runscope_step.step", index -1, editName(stepName))
+		return """depends_on     = ["{}{}_{}"]""".format("runscope_step.step", index -1, editName(stepName))
 	else:
 		return ""
 
