@@ -2,9 +2,9 @@ import json
 
 def createEnvironment(test, bucket):
 	jsonData = test.testDetail 
-	for environment in jsonData["environments"]:
-		bucket.allEnvironments[environment["id"]] = "runscope_environment." + editName(bucket.jsonData["name"]) + "_" + editName(jsonData["name"]) + "_" + editName(environment["name"]) + ".id"
-		test.dataToFile += """resource "runscope_environment" "{}_{}_{}" {{
+	for index, environment in enumerate(jsonData["environments"]):
+		bucket.allEnvironments[environment["id"]] = "runscope_environment." + str(index) + editName(bucket.jsonData["name"]) + "_" + editName(jsonData["name"]) + "_" + editName(environment["name"]) + ".id"
+		test.dataToFile += """resource "runscope_environment" "{}{}_{}_{}" {{
 	bucket_id               = \"${{var.bucket_id}}\"
 	test_id                 = \"${{runscope_test.{}.id}}\"
 	name                    = \"{}\"
@@ -17,7 +17,7 @@ def createEnvironment(test, bucket):
 	integrations            = {}
 	remote_agents           = {}
 	{}
-}}\n\n""".format(editName(bucket.jsonData["name"]), editName(jsonData["name"]), editName(environment["name"]), editName(jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), (editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}") if environment["parent_environment_id"] == None else editAssertions(getIntialValues(environment["parent_environment_id"], bucket.sharedEnvironments)), json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), editAssertions(environment["remote_agents"]) if len(environment["remote_agents"]) > 0 else [], extension(environment) if bucket.extension else "")
+}}\n\n""".format(index, editName(bucket.jsonData["name"]), editName(jsonData["name"]), editName(environment["name"]), editName(jsonData["name"]), environment["name"], json.dumps(environment["regions"]), str(environment["retry_on_failure"]).lower(), (editAssertions(environment["initial_variables"]) if environment["initial_variables"] != None else "{}") if environment["parent_environment_id"] == None else editAssertions(getIntialValues(environment["parent_environment_id"], bucket.sharedEnvironments)), json.dumps(environment["script"]) if environment["script"] != None else "\"\"", str(environment["verify_ssl"]).lower(), str(environment["preserve_cookies"]).lower(), json.dumps(getIntegrations(environment["integrations"])), editAssertions(environment["remote_agents"]) if len(environment["remote_agents"]) > 0 else [], extension(environment) if bucket.extension else "")
 
 
 def createSharedEnvironment(bucket):
@@ -69,7 +69,7 @@ def createTestStep(test, bucket):
 	before_scripts = {}
 	body           = {}
 	{}
-}}\n\n""".format(index, editName(jsonData["name"]), editName(jsonData["name"]), step["step_type"], step["url"], step["method"], getHeaders(jsonData, step["headers"], bucket), editAssertions(step["assertions"]), editAssertions(step["variables"]), json.dumps(step["scripts"]) if "scripts" in step and step["scripts"] != [''] else [], json.dumps(step["before_scripts"]) if "before_scripts" in step else [], json.dumps(step["body"]) if "body" in step else "\"\"", dependsOn(index, jsonData["name"]))
+}}\n\n""".format(index, editName(jsonData["name"]), editName(jsonData["name"]), step["step_type"], step["url"], step["method"], getHeaders(jsonData, step["headers"], bucket), editAssertions(step["assertions"]), editAssertions(step["variables"]), json.dumps(step["scripts"]) if "scripts" in step and step["scripts"] != [''] else [], json.dumps(step["before_scripts"]) if "before_scripts" in step else [], json.dumps(step["body"]) if "body" in step and step["body"] != None else "\"\"", dependsOn(index, jsonData["name"]))
 
 
 def createTest(test):
