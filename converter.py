@@ -87,9 +87,23 @@ def progressBarStep(length, testName, index):
 	sys.stdout.flush()
 
 
-def parse(access_token, numberOfTests, extension):
+def searchBucket(buckets, bucket_name):
+	print("\nFinding bucket...")
+	for bucket in buckets:
+		if 'name' in bucket.jsonData and bucket.jsonData['name'] == bucket_name:
+			print("\nBucket found!")
+			return [bucket]
+
+	print("\nBucket not found!")
+	return []
+
+
+def parse(access_token, numberOfTests, extension, bucket_name):
 	api = RunscopeAPI(access_token, numberOfTests)
 	buckets = api.getAllBuckets(extension)
+	if bucket_name != 'all':
+		buckets = searchBucket(buckets, bucket_name)
+
 	initprogressBar(len(buckets))
 	i = 1
 	for bucket in buckets:
@@ -115,10 +129,11 @@ def parse(access_token, numberOfTests, extension):
 
 def main():
 	access_token  = input("Enter an access_token for runscope: ")
+	bucket_name = input("Enter the exact name of the bucket or enter all: ")
 	numberOfTests = input("How many tests you would like to get from every bucket: ")
 	extension     = input("Do you want to use webhooks and emails?[y/n] ")
 	extension = extension == "y"
 	terraform.makeMainFile(access_token)
-	parse(access_token, numberOfTests, extension)
+	parse(access_token, numberOfTests, extension, bucket_name)
 
 main()
