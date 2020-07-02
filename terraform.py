@@ -54,6 +54,9 @@ def createSchedule(test, bucket):
 def createTestStep(test, bucket):
 	jsonData = test.testDetail
 	for index, step in enumerate(jsonData["steps"]):
+		if step['step_type'] == 'pause':
+			print('\n Atention: Pause step skipped ({} / {})'.format(test.jsonData['name'], bucket.jsonData['name']))
+			continue
 		test.dataToFile += """resource \"runscope_step\" \"step{}_{}\" {{
 	bucket_id      = \"${{var.bucket_id}}\"
 	test_id        = \"${{runscope_test.{}.id}}\"
